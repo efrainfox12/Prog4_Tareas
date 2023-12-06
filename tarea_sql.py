@@ -1,92 +1,130 @@
-import mysql.connector
+from sqlalchemy import create_engine, Column, String
+from sqlalchemy.orm import sessionmaker, declarative_base
 
-def conectar():
-    # Función para conectarse a la base de datos
-    DB_URL = "mysql+mysqlconnector://root:efrainfox1212@localhost:3306/diccionario_panamenian"
-    return DB_URL
+Base = declarative_base()
 
-def crear_tablas():
-    # Función para crear las tablas necesarias
-    conexion = conectar()
-    cursor = conexion.cursor()
+engine = create_engine("mysql+pymysql://root:efrainfox1212@localhost/diccionario_panamenian")
+class Diccionario(Base):
+    __tablename__ = "diccionario"
+    palabra = Column(String(length=15), primary_key=True)
+    definicion = Column(String(length=25))  # Cambiado de "significado" a "definicion"
 
-    # Crear la tabla de palabras
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS palabra (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            palabra VARCHAR(255) NOT NULL
-        )
-    """)
+    def __init__(self, palabra, definicion):  # Cambiado de "significado" a "definicion"
+        self.palabra = palabra
+        self.definicion = definicion  # Cambiado de "significado" a "definicion"
 
-    # Crear la tabla de significados
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS significado (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            significado TEXT NOT NULL
-        )
-    """)
 
-    # Crear la tabla de relación entre palabra y significado
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS palabra_significado (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            id_palabra INT,
-            id_significado INT,
-            FOREIGN KEY (id_palabra) REFERENCES palabra(id),
-            FOREIGN KEY (id_significado) REFERENCES significado(id)
-        )
-    """)
+Base.metadata.create_all(engine)
 
-    conexion.commit()
-    conexion.close()
+Session = sessionmaker(bind=engine)
+session = Session()
 
-def consultar_diccionario():
-    # Función para consultar todas las palabras y significados en el diccionario
-    conexion = conectar()
-    cursor = conexion.cursor()
 
-    cursor.execute("""
-        SELECT palabra.palabra, significado.significado
-        FROM palabra
-        JOIN palabra_significado ON palabra.id = palabra_significado.id_palabra
-        JOIN significado ON palabra_significado.id_significado = significado.id
-    """)
+def exispalabra(buscar, Diccionario):
+    buscar = session.query(Diccionario).filter_by(palabra=buscar).first()
+    return buscar
 
-    resultados = cursor.fetchall()
+def aggpalabra(Diccionario):
+    print("\n¡Vamos agregar una palabra!")
+    continuar = True
+    while continuar:
+        palabra = input("\nEscribir nueva palabra: ")
+        buscar = exispalabra(palabra, Diccionario)
+        if buscar:
+            print("\nLa palabra ya existe")
+        else:
+            definicion = input("\nEscribir definición: ")  # Cambiado de "significado" a "definicion"
+            registro = Diccionario(palabra=palabra, definicion=definicion)  # Cambiado de "significado" a "definicion"
+            session.add(registro)
+            session.commit()
+            print("\n¡Palabra agregada con éxito!")
+            continuar = False
 
-    for resultado in resultados:
-        print(f"{resultado[0]}: {resultado[1]}")
+def editpalabra(Diccionario):
+    print("\n¡Vamos a editar una palabra!")
+    continuar = True
+    while continuar:
+        palabra = input("\nEscribe la palabra a editar: ").lower()
+        buscar = exispalabra(palabra, Diccionario)
+        if not buscar:
+            print("\nLa palabra no existe")
+        else:
+            nueva_palabra = input("\nEscribe el nuevo significado: ")
+            palabraedit = session.query(Diccionario).filter_by(palabra=palabra).first()
+            palabraedit.significado = nueva_palabra
+            session.commit()
+            print("\nPalabra editada con éxito")
+            continuar = False
 
-    conexion.close()
 
-def agregar_palabra_y_significado(palabra, significado):
-    # Función para agregar una nueva palabra y su significado al diccionario
-    conexion = conectar()
-    cursor = conexion.cursor()
+def delpalabra(Diccionario):
+    print("\n¡Eliminar una palabra!")
+    palabra = input("\nEscribe la palabra a eliminar: ").lower()
+    buscar = exispalabra(palabra, Diccionario)
+    if not buscar:
+        print("\nLa palabra no existe")
+    else:
+        confirmacion = input(f"\n¿Estás seguro de que deseas eliminar la palabra '{palabra}'? (Sí/No): ").lower()
+        if confirmacion == "si" or confirmacion == "s":
+            session.delete(buscar)
+            session.commit()
+            print("\nPalabra eliminada con éxito")
+        else:
+            print("\nOperación de eliminación cancelada")
 
-    # Insertar la palabra en la tabla 'palabra'
-    cursor.execute("INSERT INTO palabra (palabra) VALUES (%s)", (palabra,))
-    id_palabra = cursor.lastrowid
 
-    # Insertar el significado en la tabla 'significado'
-    cursor.execute("INSERT INTO significado (significado) VALUES (%s)", (significado,))
-    id_significado = cursor.lastrowid
+def listpalabra(Diccionario):
+    print("\n¡Listado de palabras!")
+    palabras = session.query(Diccionario.palabra).all()
+    if not palabras:
+        print("Diccionario vacío, intenta añadir una palabra primero")
+    else:
+        for palabra in palabras:
+            print(palabra[0])
 
-    # Crear la relación en la tabla 'palabra_significado'
-    cursor.execute("INSERT INTO palabra_significado (id_palabra, id_significado) VALUES (%s, %s)", (id_palabra, id_significado))
 
-    conexion.commit()
-    conexion.close()
+def signpalabra(Diccionario):
+    print("\n¡Vamos a buscar un significado!")
+    continuar = True
+    while continuar:
+        palabra = input("\nEscriba la palabra para buscar su significado: ")
+        buscar = palabra.lower()
+        registro = session.query(Diccionario).filter_by(palabra=buscar).first()
+        if registro:
+            print(f"\n{palabra}: {registro.definicion}")
+            continuar = False
+        else:
+            print(f"\nNo se encontró el significado de {palabra}.")
 
-# Crear las tablas necesarias
-crear_tablas()
+def menu():
+    while True:
+        print("\n\n--<| DICCIONARIO PANAMEÑO |>--")
+        print("1. Agregar nueva palabra.")
+        print("2. Editar palabra existente.")
+        print("3. Eliminar palabra existente.")
+        print("4. Ver listado de palabras.")
+        print("5. Buscar significado de palabra.")
+        print("6. Salir.")
+        try:
+            opcion = int(input("Opcion: "))
+        except:
+            print("ERR::Opcion invalida.")
+            opcion = 999
 
-# Ejemplos de uso
-# Consultar todas las palabras en el diccionario
-consultar_diccionario()
+        if opcion == 1:
+            aggpalabra(Diccionario)
+        elif opcion == 2:
+            editpalabra(Diccionario)
+        elif opcion == 3:
+            delpalabra(Diccionario)
+        elif opcion == 4:
+            listpalabra(Diccionario)
+        elif opcion == 5:
+            signpalabra(Diccionario)
+        elif opcion == 6:
+            print("¡Hasta luego!")
+            session.close()
+            exit()
 
-# Agregar una nueva palabra y su significado
-agregar_palabra_y_significado("Python", "Lenguaje de programación de alto nivel")
-
-# Consultar el diccionario después de agregar una nueva palabra y su significado
-consultar_diccionario()
+if __name__ == "__main__":
+        menu()
