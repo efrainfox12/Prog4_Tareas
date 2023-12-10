@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eliminar Palabra</title>
+</head>
+<body>
+    <h1>Eliminar Palabra</h1>
+    {% if mensaje %}
+        <p>{{ mensaje }}</p>
+    {% endif %}
+    <form action="/eliminar" method="post">
+        <label for="palabra">Palabra a Eliminar:</label>
+        <input type="text" name="palabra" required>
+        <br>
+        <button type="submit">Eliminar Palabra</button>
+    </form>
+    <br>
+    <a href="/">Volver al Inicio</a>
+</body>
+</html>

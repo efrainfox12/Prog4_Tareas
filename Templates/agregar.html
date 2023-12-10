@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agregar Palabra</title>
+</head>
+<body>
+    <h1>Agregar Palabra</h1>
+    {% if mensaje %}
+        <p>{{ mensaje }}</p>
+    {% endif %}
+    <form action="/agregar" method="post">
+        <label for="palabra">Palabra:</label>
+        <input type="text" name="palabra" required>
+        <br>
+        <label for="definicion">Definición:</label>
+        <input type="text" name="definicion" required>
+        <br>
+        <button type="submit">Agregar Palabra</button>
+    </form>
+    <br>
+    <a href="/">Volver al Inicio</a>
+</body>
+</html>
